@@ -9,25 +9,47 @@ const app: Express = express();
 // Middleware - must be before routes
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  process.env.VERCEL_URL, // Vercel deployment URL
+  process.env.NEXT_PUBLIC_VERCEL_URL, // Alternative Vercel env var
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://joscity-frontend.onrender.com",
+  "http://localhost:5174",
+  "jos-city-tawny.vercel.app",
 ].filter(Boolean);
+
+// Vercel URL patterns (allows any *.vercel.app domain)
+const vercelPattern = /^https:\/\/.*\.vercel\.app$/;
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // If no origin header is present (like for curl or mobile apps), allow
       if (!origin) return callback(null, true);
+
       // Filter undefined just in case
       const filteredOrigins = allowedOrigins.filter((o): o is string => !!o);
+
+      // Check if origin is in allowed list
       if (filteredOrigins.includes(origin)) {
         return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
       }
+
+      // Check if origin matches Vercel pattern
+      if (vercelPattern.test(origin)) {
+        return callback(null, true);
+      }
+
+      // In development, allow all origins (optional - remove in production)
+      if (process.env.NODE_ENV === "development") {
+        return callback(null, true);
+      }
+
+      // Otherwise, deny
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 app.use(express.json());
