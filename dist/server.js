@@ -9,7 +9,28 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Middleware - must be before routes
-app.use((0, cors_1.default)());
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://joscity-frontend.onrender.com'
+].filter(Boolean);
+app.use((0, cors_1.default)({
+    origin: (origin, callback) => {
+        // If no origin header is present (like for curl or mobile apps), allow
+        if (!origin)
+            return callback(null, true);
+        // Filter undefined just in case
+        const filteredOrigins = allowedOrigins.filter((o) => !!o);
+        if (filteredOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        else {
+            return callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 app.use(express_1.default.json());
 // Import admin routes
 const admin_1 = __importDefault(require("./apis/modules/routes/admin"));

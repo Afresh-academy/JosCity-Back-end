@@ -1,18 +1,12 @@
 import { Request, Response } from "express";
 import db from "../../config/database";
 
-interface AuthRequest extends Request {
-  user?: {
-    user_id: number;
-  };
-}
-
 // ============================================
 // NAVBAR CONTROLLERS
 // ============================================
 
 export const getNavbarMenuItems = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -153,7 +147,7 @@ export const deleteNavbarMenuItem = async (
 };
 
 export const getNavbarSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -231,7 +225,7 @@ export const updateNavbarSettings = async (
 // ============================================
 
 export const getContactSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -286,7 +280,7 @@ export const updateContactSettings = async (
 };
 
 export const getContactMessages = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -412,7 +406,7 @@ export const deleteContactMessage = async (
 };
 
 export const getContactInformation = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -556,7 +550,7 @@ export const deleteContactInformation = async (
 // ============================================
 
 export const getEventsSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -621,7 +615,10 @@ export const updateEventsSettings = async (
   }
 };
 
-export const getEvents = async (req: Request, res: Response): Promise<void> => {
+export const getEvents = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const result = await db.query(
       "SELECT * FROM events ORDER BY event_date ASC, created_at DESC"
@@ -943,7 +940,7 @@ export const updateEventRegistration = async (
 // ============================================
 
 export const getServicesSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1009,7 +1006,7 @@ export const updateServicesSettings = async (
 };
 
 export const getServices = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1223,7 +1220,7 @@ export const deleteService = async (
 };
 
 export const getServiceRequests = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1306,7 +1303,7 @@ export const updateServiceRequest = async (
 // ============================================
 
 export const getPricingSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1372,7 +1369,7 @@ export const updatePricingSettings = async (
 };
 
 export const getPricingPlans = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1705,7 +1702,7 @@ export const deletePricingPlanFeature = async (
 };
 
 export const getUserSubscriptions = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1781,7 +1778,7 @@ export const updateUserSubscription = async (
 // ============================================
 
 export const getGuidelinesSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -1836,7 +1833,7 @@ export const updateGuidelinesSettings = async (
 };
 
 export const getGuidelines = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -2018,7 +2015,7 @@ export const deleteGuideline = async (
 // ============================================
 
 export const getHeroSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -2108,7 +2105,7 @@ export const updateHeroSettings = async (
 };
 
 export const getHeroSlides = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -2311,7 +2308,7 @@ export const deleteHeroSlide = async (
 // ============================================
 
 export const getFooterSettings = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -2375,7 +2372,7 @@ export const updateFooterSettings = async (
 };
 
 export const getFooterLinks = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -2526,7 +2523,7 @@ export const deleteFooterLink = async (
 // ============================================
 
 export const getRegisteredCitizensCount = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {

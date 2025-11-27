@@ -9,7 +9,7 @@ const database_1 = __importDefault(require("../../config/database"));
 // ============================================
 // NAVBAR CONTROLLERS
 // ============================================
-const getNavbarMenuItems = async (req, res) => {
+const getNavbarMenuItems = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM navbar_menu_items ORDER BY display_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -105,7 +105,7 @@ const deleteNavbarMenuItem = async (req, res) => {
     }
 };
 exports.deleteNavbarMenuItem = deleteNavbarMenuItem;
-const getNavbarSettings = async (req, res) => {
+const getNavbarSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM navbar_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -162,7 +162,7 @@ exports.updateNavbarSettings = updateNavbarSettings;
 // ============================================
 // CONTACT CONTROLLERS
 // ============================================
-const getContactSettings = async (req, res) => {
+const getContactSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM contact_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -201,7 +201,7 @@ const updateContactSettings = async (req, res) => {
     }
 };
 exports.updateContactSettings = updateContactSettings;
-const getContactMessages = async (req, res) => {
+const getContactMessages = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM contact_messages ORDER BY created_at DESC");
         res.json({ success: true, data: result.rows });
@@ -297,7 +297,7 @@ const deleteContactMessage = async (req, res) => {
     }
 };
 exports.deleteContactMessage = deleteContactMessage;
-const getContactInformation = async (req, res) => {
+const getContactInformation = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM contact_information ORDER BY display_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -396,7 +396,7 @@ exports.deleteContactInformation = deleteContactInformation;
 // ============================================
 // EVENTS CONTROLLERS
 // ============================================
-const getEventsSettings = async (req, res) => {
+const getEventsSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM events_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -446,7 +446,7 @@ const updateEventsSettings = async (req, res) => {
     }
 };
 exports.updateEventsSettings = updateEventsSettings;
-const getEvents = async (req, res) => {
+const getEvents = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM events ORDER BY event_date ASC, created_at DESC");
         res.json({ success: true, data: result.rows });
@@ -682,7 +682,7 @@ exports.updateEventRegistration = updateEventRegistration;
 // ============================================
 // SERVICES CONTROLLERS
 // ============================================
-const getServicesSettings = async (req, res) => {
+const getServicesSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM services_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -732,7 +732,7 @@ const updateServicesSettings = async (req, res) => {
     }
 };
 exports.updateServicesSettings = updateServicesSettings;
-const getServices = async (req, res) => {
+const getServices = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM services ORDER BY display_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -892,7 +892,7 @@ const deleteService = async (req, res) => {
     }
 };
 exports.deleteService = deleteService;
-const getServiceRequests = async (req, res) => {
+const getServiceRequests = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM service_requests ORDER BY created_at DESC");
         res.json({ success: true, data: result.rows });
@@ -957,7 +957,7 @@ exports.updateServiceRequest = updateServiceRequest;
 // ============================================
 // PRICING CONTROLLERS
 // ============================================
-const getPricingSettings = async (req, res) => {
+const getPricingSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM pricing_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -1007,7 +1007,7 @@ const updatePricingSettings = async (req, res) => {
     }
 };
 exports.updatePricingSettings = updatePricingSettings;
-const getPricingPlans = async (req, res) => {
+const getPricingPlans = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM pricing_plans ORDER BY display_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -1256,7 +1256,7 @@ const deletePricingPlanFeature = async (req, res) => {
     }
 };
 exports.deletePricingPlanFeature = deletePricingPlanFeature;
-const getUserSubscriptions = async (req, res) => {
+const getUserSubscriptions = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM user_subscriptions ORDER BY created_at DESC");
         res.json({ success: true, data: result.rows });
@@ -1314,7 +1314,7 @@ exports.updateUserSubscription = updateUserSubscription;
 // ============================================
 // GUIDELINES CONTROLLERS
 // ============================================
-const getGuidelinesSettings = async (req, res) => {
+const getGuidelinesSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM guidelines_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -1353,7 +1353,7 @@ const updateGuidelinesSettings = async (req, res) => {
     }
 };
 exports.updateGuidelinesSettings = updateGuidelinesSettings;
-const getGuidelines = async (req, res) => {
+const getGuidelines = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM guidelines ORDER BY display_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -1483,7 +1483,7 @@ exports.deleteGuideline = deleteGuideline;
 // ============================================
 // HERO CONTROLLERS
 // ============================================
-const getHeroSettings = async (req, res) => {
+const getHeroSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM hero_page_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -1547,7 +1547,7 @@ const updateHeroSettings = async (req, res) => {
     }
 };
 exports.updateHeroSettings = updateHeroSettings;
-const getHeroSlides = async (req, res) => {
+const getHeroSlides = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM hero_slides ORDER BY slide_order ASC, created_at ASC");
         res.json({ success: true, data: result.rows });
@@ -1692,7 +1692,7 @@ exports.deleteHeroSlide = deleteHeroSlide;
 // ============================================
 // FOOTER CONTROLLERS
 // ============================================
-const getFooterSettings = async (req, res) => {
+const getFooterSettings = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM footer_settings ORDER BY updated_at DESC LIMIT 1");
         res.json({ success: true, data: result.rows[0] || null });
@@ -1742,7 +1742,7 @@ const updateFooterSettings = async (req, res) => {
     }
 };
 exports.updateFooterSettings = updateFooterSettings;
-const getFooterLinks = async (req, res) => {
+const getFooterLinks = async (_req, res) => {
     try {
         const result = await database_1.default.query("SELECT * FROM footer_links ORDER BY section, display_order ASC");
         res.json({ success: true, data: result.rows });
@@ -1847,7 +1847,7 @@ exports.deleteFooterLink = deleteFooterLink;
 // ============================================
 // STATS CONTROLLERS
 // ============================================
-const getRegisteredCitizensCount = async (req, res) => {
+const getRegisteredCitizensCount = async (_req, res) => {
     try {
         // Count all approved users (both personal and business)
         const result = await database_1.default.query(`SELECT COUNT(*) as count 
