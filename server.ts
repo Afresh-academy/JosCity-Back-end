@@ -18,7 +18,7 @@ import authRoutes from "./apis/modules/routes/authRoute";
 import landingPageRoutes from "./apis/modules/routes/landingPage";
 
 // Use admin routes
-app.use("/admin", adminRoutes);
+app.use("/admin/auth", adminRoutes);
 
 // Use routes
 app.use("/api/auth", authRoutes);
