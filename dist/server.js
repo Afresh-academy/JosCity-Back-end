@@ -9,28 +9,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Middleware - must be before routes
-const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://joscity-frontend.onrender.com'
-].filter(Boolean);
-app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        // If no origin header is present (like for curl or mobile apps), allow
-        if (!origin)
-            return callback(null, true);
-        // Filter undefined just in case
-        const filteredOrigins = allowedOrigins.filter((o) => !!o);
-        if (filteredOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        else {
-            return callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true
-}));
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // Import admin routes
 const admin_1 = __importDefault(require("./apis/modules/routes/admin"));
@@ -68,18 +47,44 @@ app.use((error, _req, res, _next) => {
         message: "Internal server error",
     });
 });
-// Validate required environment variables
+// Validate required environment variables (non-fatal - just warn)
 if (!process.env.JWT_SECRET) {
-    console.error("❌ ERROR: JWT_SECRET is not set in .env file");
+    console.error("❌ WARNING: JWT_SECRET is not set in .env file");
     console.error("   Please add JWT_SECRET to your .env file");
-    process.exit(1);
+    console.error("   Server will continue but authentication may not work");
 }
+// Handle uncaught exceptions - prevent server crash
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    console.error('   → Server will continue running');
+    // Don't exit - log and continue
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('   → Server will continue running');
+    // Don't exit - log and continue
+});
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
     console.log(`📧 Email service: ${process.env.SMTP_USER ? "Configured" : "Not configured"}`);
     console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
+});
+// Graceful shutdown handler
+process.on('SIGINT', () => {
+    console.log('\n🛑 Shutting down server gracefully...');
+    server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+    });
+});
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Shutting down server gracefully...');
+    server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+    });
 });
 //# sourceMappingURL=server.js.map

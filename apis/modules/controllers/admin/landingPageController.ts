@@ -615,10 +615,7 @@ export const updateEventsSettings = async (
   }
 };
 
-export const getEvents = async (
-  _req: Request,
-  res: Response
-): Promise<void> => {
+export const getEvents = async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await db.query(
       "SELECT * FROM events ORDER BY event_date ASC, created_at DESC"
