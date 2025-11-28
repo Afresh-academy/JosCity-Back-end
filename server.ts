@@ -1,6 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -9,6 +10,7 @@ const app: Express = express();
 // Middleware - must be before routes
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // Import admin routes
 import adminRoutes from "./apis/modules/routes/admin";
