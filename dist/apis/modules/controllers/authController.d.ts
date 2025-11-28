@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 interface SignUpBody {
     first_name: string;
     last_name: string;
@@ -8,7 +8,7 @@ interface SignUpBody {
     email: string;
     password: string;
     address: string;
-    account_type?: 'personal' | 'business';
+    account_type?: "personal" | "business";
     business_name?: string;
     business_type?: string;
     CAC_number?: string;

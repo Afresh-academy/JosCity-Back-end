@@ -6,18 +6,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Middleware - must be before routes
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+app.use((0, cookie_parser_1.default)());
 // Import admin routes
 const admin_1 = __importDefault(require("./apis/modules/routes/admin"));
 // Import routes
 const authRoute_1 = __importDefault(require("./apis/modules/routes/authRoute"));
 const landingPage_1 = __importDefault(require("./apis/modules/routes/landingPage"));
 // Use admin routes
-app.use("/api/admin", admin_1.default);
+app.use("/admin/auth", admin_1.default);
 // Use routes
 app.use("/api/auth", authRoute_1.default);
 // Public landing page routes (no authentication required)
