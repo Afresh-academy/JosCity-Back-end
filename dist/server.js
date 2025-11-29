@@ -89,36 +89,40 @@ process.on("unhandledRejection", (reason, promise) => {
     console.error("   → Server will continue running");
     // Don't exit - log and continue
 });
-// Start server
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) {
-        console.log(`📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(0, 12)}...)`);
-        console.log(`   RESEND_FROM: ${process.env.RESEND_FROM ||
-            process.env.SMTP_FROM ||
-            "Not set (using default)"}`);
-    }
-    else {
-        console.warn(`📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`);
-    }
-    console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
-});
-// Graceful shutdown handler
-process.on("SIGINT", () => {
-    console.log("\n🛑 Shutting down server gracefully...");
-    server.close(() => {
-        console.log("✅ Server closed");
-        process.exit(0);
+// Export app for Vercel serverless functions
+module.exports = app;
+// Start server only if not in Vercel environment
+if (process.env.VERCEL !== "1") {
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
+        const resendKey = process.env.RESEND_API_KEY;
+        if (resendKey) {
+            console.log(`📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(0, 12)}...)`);
+            console.log(`   RESEND_FROM: ${process.env.RESEND_FROM ||
+                process.env.SMTP_FROM ||
+                "Not set (using default)"}`);
+        }
+        else {
+            console.warn(`📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`);
+        }
+        console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
     });
-});
-process.on("SIGTERM", () => {
-    console.log("\n🛑 Shutting down server gracefully...");
-    server.close(() => {
-        console.log("✅ Server closed");
-        process.exit(0);
+    // Graceful shutdown handler
+    process.on("SIGINT", () => {
+        console.log("\n🛑 Shutting down server gracefully...");
+        server.close(() => {
+            console.log("✅ Server closed");
+            process.exit(0);
+        });
     });
-});
+    process.on("SIGTERM", () => {
+        console.log("\n🛑 Shutting down server gracefully...");
+        server.close(() => {
+            console.log("✅ Server closed");
+            process.exit(0);
+        });
+    });
+}
 //# sourceMappingURL=server.js.map
