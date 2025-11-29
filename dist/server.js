@@ -41,8 +41,8 @@ const admin_1 = __importDefault(require("./apis/modules/routes/admin"));
 // Import routes
 const authRoute_1 = __importDefault(require("./apis/modules/routes/authRoute"));
 const landingPage_1 = __importDefault(require("./apis/modules/routes/landingPage"));
-// Use admin routes
-app.use("/admin/auth", admin_1.default);
+// Use admin routes - mounted at /admin so routes become /admin/auth, /admin/dashboard, etc.
+app.use("/admin", admin_1.default);
 // Use routes
 app.use("/api/auth", authRoute_1.default);
 // Public landing page routes (no authentication required)
