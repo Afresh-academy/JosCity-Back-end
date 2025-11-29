@@ -23,7 +23,8 @@
     "nodemailer": "^7.0.10",
     "nodemon": "^3.1.11",
     "pg": "^8.16.3",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "resend": "^6.5.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
