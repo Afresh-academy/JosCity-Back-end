@@ -6,13 +6,13 @@ This guide explains how to connect the registration forms to the database.
 
 1. **PostgreSQL Database** - Ensure PostgreSQL is running
 2. **Database Created** - Database name should match `DB_NAME` in `.env` (default: `postgres`)
-3. **Schema Created** - Run `users_schema.sql` to create the `joscity` schema and `users` table
+3. **Schema Created** - Run `users_schema.sql` to create the `users` table in the `public` schema
 
 ## Setup Steps
 
 ### 1. Create the Database Schema
 
-Run the users schema file to create the `joscity` schema and `users` table:
+Run the users schema file to create the `users` table in the `public` schema:
 
 ```bash
 psql -U your_user -d postgres -f database/joscity/users_schema.sql
@@ -27,7 +27,8 @@ psql -U your_user -d your_database_name -f database/joscity/users_schema.sql
 ### 2. Verify Database Connection
 
 The backend automatically:
-- Sets `search_path TO joscity, public` for all connections
+
+- Sets `search_path TO landing_page, public` for all connections
 - Checks if the users table exists on startup
 - Logs connection status and table existence
 
@@ -62,10 +63,11 @@ npm run dev
 ```
 
 You should see:
+
 ```
 ✅ Connected to PostgreSQL Database
    → Server time: [timestamp]
-   → Schema: joscity
+   → Schema: public
    → Users table exists: Yes
 🚀 Server running on port 3000
 ```
@@ -73,6 +75,7 @@ You should see:
 ### 5. Test the Forms
 
 1. **Personal Registration Form:**
+
    - Navigate to `/register` (defaults to personal form)
    - Fill in all required fields:
      - First Name, Last Name
@@ -109,6 +112,7 @@ The forms connect to these endpoints:
 - **Business Registration:** `POST /api/auth/business/register`
 
 Both endpoints:
+
 - Validate all required fields
 - Check for duplicate emails, NIN numbers, CAC numbers
 - Hash passwords using bcrypt
@@ -118,9 +122,9 @@ Both endpoints:
 
 ## Database Schema
 
-Tables are created in the `joscity` schema:
+Tables are created in the `public` schema:
 
-- **Schema:** `joscity`
+- **Schema:** `public`
 - **Table:** `users`
 - **Primary Key:** `user_id` (SERIAL)
 
@@ -129,12 +133,15 @@ Tables are created in the `joscity` schema:
 ### Forms Not Connecting
 
 1. **Check Backend is Running:**
+
    ```bash
    curl http://localhost:3000/api/ping
    ```
+
    Should return: `{"message":"pong",...}`
 
 2. **Check API Base URL:**
+
    - Frontend uses: `import.meta.env.VITE_API_URL || '/api'`
    - Default: `/api` (relative URL)
    - For production, set `VITE_API_URL` in `.env` file
@@ -147,17 +154,19 @@ Tables are created in the `joscity` schema:
 ### Database Errors
 
 1. **Table Not Found:**
+
    - Run `users_schema.sql` to create the table
-   - Verify schema exists: `SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'joscity';`
+   - Verify table exists: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');`
 
 2. **Schema Not Found:**
-   - The schema is created automatically by `users_schema.sql`
-   - If missing, run: `CREATE SCHEMA IF NOT EXISTS joscity;`
+
+   - The `public` schema exists by default in PostgreSQL
+   - If needed, ensure you have permissions on the public schema
 
 3. **Permission Errors:**
    - Ensure database user has CREATE, INSERT, UPDATE, SELECT permissions
-   - Grant schema usage: `GRANT USAGE ON SCHEMA joscity TO your_user;`
-   - Grant table permissions: `GRANT ALL ON joscity.users TO your_user;`
+   - Grant schema usage: `GRANT USAGE ON SCHEMA public TO your_user;`
+   - Grant table permissions: `GRANT ALL ON public.users TO your_user;`
 
 ### Validation Errors
 
@@ -172,33 +181,33 @@ Test if data is being saved:
 ```sql
 -- Check if users table exists
 SELECT EXISTS (
-  SELECT FROM information_schema.tables 
-  WHERE table_schema = 'joscity' 
+  SELECT FROM information_schema.tables
+  WHERE table_schema = 'public'
   AND table_name = 'users'
 );
 
 -- View all registered users
-SELECT user_id, user_email, account_type, account_status, user_registered 
-FROM joscity.users 
+SELECT user_id, user_email, account_type, account_status, user_registered
+FROM public.users
 ORDER BY user_registered DESC;
 
 -- Check pending approvals
-SELECT user_id, user_email, account_type, business_name 
-FROM joscity.users 
+SELECT user_id, user_email, account_type, business_name
+FROM public.users
 WHERE account_status = 'pending';
 
 -- Count by account type
-SELECT account_type, COUNT(*) as count 
-FROM joscity.users 
+SELECT account_type, COUNT(*) as count
+FROM public.users
 GROUP BY account_type;
 ```
 
 ## Next Steps
 
 After registration:
+
 1. Users receive "under review" email
 2. Admin approves account via admin panel
 3. User receives activation code via email
 4. User activates account with activation code
 5. User can login
-

@@ -39,9 +39,13 @@ import adminRoutes from "./apis/modules/routes/admin";
 // Import routes
 import authRoutes from "./apis/modules/routes/authRoute";
 import landingPageRoutes from "./apis/modules/routes/landingPage";
+import * as authController from "./apis/modules/controllers/authController";
 
 // Use admin routes - mounted at /admin so routes become /admin/auth, /admin/dashboard, etc.
 app.use("/admin", adminRoutes);
+
+// Admin authentication route with hardcoded credentials
+app.post("/api/admin/adminAuth", authController.adminAuth);
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -125,24 +129,25 @@ if (process.env.VERCEL !== "1") {
         process.env.JWT_SECRET ? "Configured" : "Not configured"
       }`
     );
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) {
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    if (smtpUser && smtpPass) {
+      const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+      const smtpPort = process.env.SMTP_PORT || "465";
       console.log(
-        `📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(
-          0,
-          12
-        )}...)`
+        `📧 Email service: ✅ Configured (SMTP: ${smtpHost}:${smtpPort})`
       );
       console.log(
-        `   RESEND_FROM: ${
-          process.env.RESEND_FROM ||
-          process.env.SMTP_FROM ||
-          "Not set (using default)"
+        `   SMTP_USER: ${smtpUser.substring(0, smtpUser.indexOf("@") + 1)}...`
+      );
+      console.log(
+        `   SMTP_FROM: ${
+          process.env.SMTP_FROM || smtpUser || "Not set (using default)"
         }`
       );
     } else {
       console.warn(
-        `📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`
+        `📧 Email service: ⚠️  Not configured - SMTP_USER or SMTP_PASS missing`
       );
     }
     console.log(

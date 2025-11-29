@@ -1,34 +1,26 @@
-import dotenv from "dotenv";
-
-// Ensure environment variables are loaded
-// This is safe to call multiple times - dotenv won't overwrite existing vars
-dotenv.config();
+require("dotenv").config();
+import nodemailer from "nodemailer";
 
 // Helper function to get the "from" email address
-const getFromAddress = (useDefault: boolean = false): string => {
-  // If useDefault is true, return the verified default domain immediately
-  if (useDefault) {
-    return '"JosCity" <onboarding@resend.dev>';
-  }
+const getFromAddress = (): string => {
+  // Check for SMTP_FROM first
+  const from = process.env.SMTP_FROM || "";
+  const user = process.env.SMTP_USER || "";
 
-  // Check for RESEND_FROM first, then fallback to SMTP_FROM for backward compatibility
-  const from = process.env.RESEND_FROM || process.env.SMTP_FROM || "";
-  const user = process.env.SMTP_USER || ""; // Keep for backward compatibility
-
-  // If RESEND_FROM or SMTP_FROM is set, use it
+  // If SMTP_FROM is set, use it
   if (from) {
     const cleanFrom = from.replace(/^["']|["']$/g, "");
 
-    // If it's in "Name <email>" format, keep it as is (Resend supports this)
+    // If it's in "Name <email>" format, keep it as is
     if (cleanFrom.includes("<") && cleanFrom.includes(">")) {
       return cleanFrom;
     } else if (cleanFrom.includes("@")) {
-      // If it's just an email address, use it
-      return cleanFrom;
+      // If it's just an email address, format it
+      return `"JosCity" <${cleanFrom}>`;
     }
   }
 
-  // If SMTP_USER is available, use it (backward compatibility)
+  // If SMTP_USER is available, use it
   if (user && user.includes("@")) {
     const name = user
       .split("@")[0]
@@ -38,50 +30,84 @@ const getFromAddress = (useDefault: boolean = false): string => {
   }
 
   // Default fallback
-  return '"JosCity" <onboarding@resend.dev>';
+  return '"JosCity" <noreply@joscity.com>';
 };
 
-// Validate that Resend API key is configured
-const validateResendConfig = (): boolean => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn("⚠️  RESEND_API_KEY not configured. Email sending will fail.");
-    console.warn("   Please add RESEND_API_KEY to your .env file");
+// Create nodemailer transporter
+const createTransporter = () => {
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
+  const smtpUser = process.env.SMTP_USER || "";
+  const smtpPass = process.env.SMTP_PASS || "";
+
+  // Validate SMTP configuration
+  if (!smtpUser || !smtpPass) {
+    throw new Error(
+      "SMTP configuration incomplete. Please set SMTP_USER and SMTP_PASS in .env file."
+    );
+  }
+
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465, // true for 465, false for other ports
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+};
+
+// Validate SMTP configuration on startup
+const validateSmtpConfig = (): boolean => {
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpUser || !smtpPass) {
+    console.warn(
+      "⚠️  SMTP_USER or SMTP_PASS not configured. Email sending will fail."
+    );
+    console.warn("   Please add SMTP_USER and SMTP_PASS to your .env file");
     return false;
   }
+
   return true;
 };
 
 // Initialize and validate on startup
-const isResendConfigured = validateResendConfig();
-if (isResendConfigured) {
-  const apiKey = process.env.RESEND_API_KEY || "";
+const isSmtpConfigured = validateSmtpConfig();
+if (isSmtpConfigured) {
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = process.env.SMTP_PORT || "465";
+  const smtpUser = process.env.SMTP_USER || "";
   console.log(
-    `✅ Resend email service is configured (API Key: ${apiKey.substring(
+    `✅ SMTP email service is configured (Host: ${smtpHost}:${smtpPort}, User: ${smtpUser.substring(
       0,
-      12
+      smtpUser.indexOf("@") + 1
     )}...)`
   );
   const fromAddress = getFromAddress();
   console.log(`   From address: ${fromAddress}`);
 } else {
-  console.warn("⚠️  Email service not initialized - RESEND_API_KEY missing");
+  console.warn("⚠️  Email service not initialized - SMTP credentials missing");
   console.warn(
-    "   Please add RESEND_API_KEY=re_your_key_here to your .env file"
+    "   Please add SMTP_USER=your_email@example.com and SMTP_PASS=your_password to your .env file"
   );
 }
 
-// Send email function using Resend API
+// Send email function using Nodemailer
 export const sendEmail = async (
   to: string,
   subject: string,
   html: string
 ): Promise<any> => {
-  // Check if Resend API key is configured
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  // Validate SMTP configuration
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpUser || !smtpPass) {
     const error = new Error(
-      "Email service not configured. Please set RESEND_API_KEY in .env file."
+      "Email service not configured. Please set SMTP_USER and SMTP_PASS in .env file."
     );
     console.error("❌", error.message);
     throw error;
@@ -96,132 +122,59 @@ export const sendEmail = async (
   }
 
   try {
+    const transporter = createTransporter();
     const fromAddress = getFromAddress();
 
     console.log(`📧 Attempting to send email to: ${to}`);
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [to],
-        subject: subject,
-        html: html,
-      }),
-    });
+    const mailOptions = {
+      from: fromAddress,
+      to: to,
+      subject: subject,
+      html: html,
+    };
 
-    if (!response.ok) {
-      const errorData: any = await response
-        .json()
-        .catch(() => ({ message: "Unknown error" }));
-      console.error("❌ Resend API error:", errorData);
+    const info = await transporter.sendMail(mailOptions);
 
-      // Check if it's a domain verification error
-      if (
-        response.status === 403 &&
-        errorData.message &&
-        errorData.message.toLowerCase().includes("domain") &&
-        errorData.message.toLowerCase().includes("not verified")
-      ) {
-        // Domain not verified - try with default Resend domain
-        console.warn(
-          `⚠️  Custom domain not verified. Falling back to default Resend domain.`
-        );
-        console.warn(
-          `   To use your custom domain, verify it at: https://resend.com/domains`
-        );
-
-        // Retry with default domain
-        const defaultFromAddress = '"JosCity" <onboarding@resend.dev>';
-        const retryResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: defaultFromAddress,
-            to: [to],
-            subject: subject,
-            html: html,
-          }),
-        });
-
-        if (!retryResponse.ok) {
-          const retryErrorData: any = await retryResponse
-            .json()
-            .catch(() => ({ message: "Unknown error" }));
-          throw new Error(
-            `Domain verification error: ${
-              errorData.message
-            }. Fallback also failed: ${
-              retryErrorData.message || "Unknown error"
-            }`
-          );
-        }
-
-        const retryData: any = await retryResponse.json();
-        console.log(
-          `✅ Email sent successfully to: ${to} using default domain (Message ID: ${
-            retryData.id || "N/A"
-          })`
-        );
-        return retryData;
-      }
-
-      // Provide helpful error messages
-      if (response.status === 401) {
-        throw new Error(
-          "Resend API authentication failed. Please check your RESEND_API_KEY in .env file."
-        );
-      } else if (response.status === 403) {
-        throw new Error(
-          `Resend API error: ${
-            errorData.message ||
-            "Access forbidden. Please check your API key permissions."
-          }`
-        );
-      } else if (response.status === 422) {
-        throw new Error(
-          `Invalid email configuration: ${
-            errorData.message || "Please check your RESEND_FROM email address."
-          }`
-        );
-      } else if (response.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-      } else {
-        throw new Error(
-          `Failed to send email via Resend: ${
-            errorData.message || `HTTP ${response.status}`
-          }`
-        );
-      }
-    }
-
-    const data: any = await response.json();
     console.log(
-      `✅ Email sent successfully to: ${to} (Message ID: ${data.id || "N/A"})`
+      `✅ Email sent successfully to: ${to} (Message ID: ${
+        info.messageId || "N/A"
+      })`
     );
-    return data;
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      response: info.response,
+    };
   } catch (error: any) {
     console.error(`❌ Email sending failed to ${to}:`, error.message || error);
 
-    // If it's already a formatted error, re-throw it
-    if (error.message && error.message.includes("Resend")) {
-      throw error;
-    }
-
-    // Handle network errors
-    if (error.code === "ECONNREFUSED" || error.code === "ENOTFOUND") {
+    // Provide helpful error messages
+    if (error.code === "EAUTH") {
       throw new Error(
-        "Failed to connect to Resend API. Please check your internet connection."
+        "SMTP authentication failed. Please check your SMTP_USER and SMTP_PASS in .env file."
+      );
+    } else if (error.code === "ECONNECTION") {
+      throw new Error(
+        `Failed to connect to SMTP server. Please check your SMTP_HOST and SMTP_PORT settings.`
+      );
+    } else if (error.code === "ETIMEDOUT") {
+      throw new Error(
+        "SMTP connection timed out. Please check your network connection."
+      );
+    } else if (error.responseCode === 550) {
+      throw new Error(
+        `Invalid recipient email address: ${to}. Please verify the email address.`
+      );
+    } else if (error.responseCode === 553) {
+      throw new Error(
+        `Invalid sender email address. Please check your SMTP_FROM or SMTP_USER setting.`
       );
     }
 
-    throw error;
+    throw new Error(
+      `Failed to send email: ${error.message || "Unknown error occurred"}`
+    );
   }
 };

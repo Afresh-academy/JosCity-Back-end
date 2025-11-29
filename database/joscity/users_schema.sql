@@ -2,17 +2,14 @@
 -- USERS TABLE SCHEMA
 -- ============================================
 -- This schema creates the users table to store both personal and business account registrations
--- Database: joscity (PostgreSQL)
+-- Database: PostgreSQL (using public schema)
 -- 
 -- Usage:
---   psql -U your_user -d joscity -f database/joscity/users_schema.sql
+--   psql -U your_user -d your_database -f database/joscity/users_schema.sql
 -- ============================================
 
--- Create joscity schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS joscity;
-
--- Set search path to joscity schema
-SET search_path TO joscity;
+-- Set search path to public schema
+SET search_path TO public;
 
 -- ============================================
 -- USERS TABLE
@@ -20,7 +17,7 @@ SET search_path TO joscity;
 -- Stores both personal and business account registrations
 -- Supports account types: 'personal' and 'business'
 
-CREATE TABLE IF NOT EXISTS joscity.users (
+CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     account_type VARCHAR(20) NOT NULL DEFAULT 'personal' 
         CHECK (account_type IN ('personal', 'business')),
@@ -66,31 +63,31 @@ CREATE TABLE IF NOT EXISTS joscity.users (
 -- ============================================
 
 -- Primary lookup indexes
-CREATE INDEX IF NOT EXISTS idx_users_email ON joscity.users(user_email);
-CREATE INDEX IF NOT EXISTS idx_users_user_name ON joscity.users(user_name);
-CREATE INDEX IF NOT EXISTS idx_users_account_type ON joscity.users(account_type);
-CREATE INDEX IF NOT EXISTS idx_users_account_status ON joscity.users(account_status);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(user_email);
+CREATE INDEX IF NOT EXISTS idx_users_user_name ON public.users(user_name);
+CREATE INDEX IF NOT EXISTS idx_users_account_type ON public.users(account_type);
+CREATE INDEX IF NOT EXISTS idx_users_account_status ON public.users(account_status);
 
 -- Personal account indexes
-CREATE INDEX IF NOT EXISTS idx_users_nin_number ON joscity.users(nin_number) WHERE nin_number IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_nin_number ON public.users(nin_number) WHERE nin_number IS NOT NULL;
 
 -- Business account indexes
-CREATE INDEX IF NOT EXISTS idx_users_business_name ON joscity.users(business_name) WHERE business_name IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_users_cac_number ON joscity.users(CAC_number) WHERE CAC_number IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_business_name ON public.users(business_name) WHERE business_name IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_cac_number ON public.users(CAC_number) WHERE CAC_number IS NOT NULL;
 
 -- Account management indexes
-CREATE INDEX IF NOT EXISTS idx_users_approved ON joscity.users(user_approved);
-CREATE INDEX IF NOT EXISTS idx_users_activated ON joscity.users(user_activated);
-CREATE INDEX IF NOT EXISTS idx_users_banned ON joscity.users(user_banned);
-CREATE INDEX IF NOT EXISTS idx_users_group ON joscity.users(user_group);
+CREATE INDEX IF NOT EXISTS idx_users_approved ON public.users(user_approved);
+CREATE INDEX IF NOT EXISTS idx_users_activated ON public.users(user_activated);
+CREATE INDEX IF NOT EXISTS idx_users_banned ON public.users(user_banned);
+CREATE INDEX IF NOT EXISTS idx_users_group ON public.users(user_group);
 
 -- Activity indexes
-CREATE INDEX IF NOT EXISTS idx_users_registered ON joscity.users(user_registered DESC);
-CREATE INDEX IF NOT EXISTS idx_users_last_seen ON joscity.users(user_last_seen DESC);
+CREATE INDEX IF NOT EXISTS idx_users_registered ON public.users(user_registered DESC);
+CREATE INDEX IF NOT EXISTS idx_users_last_seen ON public.users(user_last_seen DESC);
 
 -- Composite indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_users_status_type ON joscity.users(account_status, account_type);
-CREATE INDEX IF NOT EXISTS idx_users_pending_approval ON joscity.users(account_status, user_approved) 
+CREATE INDEX IF NOT EXISTS idx_users_status_type ON public.users(account_status, account_type);
+CREATE INDEX IF NOT EXISTS idx_users_pending_approval ON public.users(account_status, user_approved) 
     WHERE account_status = 'pending' AND user_approved = false;
 
 -- ============================================
@@ -98,7 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_users_pending_approval ON joscity.users(account_s
 -- ============================================
 
 -- Ensure NIN number is provided for personal accounts
-ALTER TABLE joscity.users 
+ALTER TABLE public.users 
     ADD CONSTRAINT chk_personal_nin_required 
     CHECK (
         (account_type = 'personal' AND nin_number IS NOT NULL) OR 
@@ -106,7 +103,7 @@ ALTER TABLE joscity.users
     );
 
 -- Ensure business name, type, and CAC number are provided for business accounts
-ALTER TABLE joscity.users 
+ALTER TABLE public.users 
     ADD CONSTRAINT chk_business_fields_required 
     CHECK (
         (account_type = 'business' AND business_name IS NOT NULL AND business_type IS NOT NULL AND CAC_number IS NOT NULL) OR 
@@ -127,9 +124,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
-DROP TRIGGER IF EXISTS update_users_updated_at_trigger ON joscity.users;
+DROP TRIGGER IF EXISTS update_users_updated_at_trigger ON public.users;
 CREATE TRIGGER update_users_updated_at_trigger
-    BEFORE UPDATE ON joscity.users
+    BEFORE UPDATE ON public.users
     FOR EACH ROW
     EXECUTE FUNCTION update_users_updated_at();
 
@@ -146,15 +143,15 @@ $$ LANGUAGE plpgsql;
 -- COMMENTS
 -- ============================================
 
-COMMENT ON TABLE joscity.users IS 'Stores user accounts for both personal and business registrations';
-COMMENT ON COLUMN joscity.users.account_type IS 'Type of account: personal or business';
-COMMENT ON COLUMN joscity.users.account_status IS 'Current status: pending, approved, rejected, or suspended';
-COMMENT ON COLUMN joscity.users.user_group IS 'User role: 0=regular, 1=admin, 2=moderator';
-COMMENT ON COLUMN joscity.users.nin_number IS 'National Identification Number (required for personal accounts)';
-COMMENT ON COLUMN joscity.users.CAC_number IS 'Corporate Affairs Commission number (required for business accounts)';
-COMMENT ON COLUMN joscity.users.activation_code IS '6-digit code sent via email for account activation';
-COMMENT ON COLUMN joscity.users.user_approved IS 'Admin approval status (true when admin approves account)';
-COMMENT ON COLUMN joscity.users.user_activated IS 'User activation status (true when user enters activation code)';
+COMMENT ON TABLE public.users IS 'Stores user accounts for both personal and business registrations';
+COMMENT ON COLUMN public.users.account_type IS 'Type of account: personal or business';
+COMMENT ON COLUMN public.users.account_status IS 'Current status: pending, approved, rejected, or suspended';
+COMMENT ON COLUMN public.users.user_group IS 'User role: 0=regular, 1=admin, 2=moderator';
+COMMENT ON COLUMN public.users.nin_number IS 'National Identification Number (required for personal accounts)';
+COMMENT ON COLUMN public.users.CAC_number IS 'Corporate Affairs Commission number (required for business accounts)';
+COMMENT ON COLUMN public.users.activation_code IS '6-digit code sent via email for account activation';
+COMMENT ON COLUMN public.users.user_approved IS 'Admin approval status (true when admin approves account)';
+COMMENT ON COLUMN public.users.user_activated IS 'User activation status (true when user enters activation code)';
 
 -- ============================================
 -- INITIAL DATA (Optional - for testing)
@@ -163,7 +160,7 @@ COMMENT ON COLUMN joscity.users.user_activated IS 'User activation status (true 
 -- Insert a default admin user (password should be changed immediately)
 -- Password: 'admin123' (hashed with bcrypt, salt rounds: 12)
 -- You should change this password after first login!
-INSERT INTO joscity.users (
+INSERT INTO public.users (
     user_name, user_email, user_password, user_firstname, user_lastname,
     user_gender, user_phone, address, account_type, account_status,
     nin_number, user_approved, user_activated, user_group, is_verified, user_verified
@@ -193,18 +190,18 @@ INSERT INTO joscity.users (
 -- Check table structure
 -- SELECT column_name, data_type, is_nullable, column_default
 -- FROM information_schema.columns
--- WHERE table_name = 'users' AND table_schema = 'joscity'
+-- WHERE table_name = 'users' AND table_schema = 'public'
 -- ORDER BY ordinal_position;
 
 -- Check constraints
 -- SELECT constraint_name, constraint_type
 -- FROM information_schema.table_constraints
--- WHERE table_name = 'users' AND table_schema = 'joscity';
+-- WHERE table_name = 'users' AND table_schema = 'public';
 
 -- Check indexes
 -- SELECT indexname, indexdef
 -- FROM pg_indexes
--- WHERE tablename = 'users' AND schemaname = 'joscity';
+-- WHERE tablename = 'users' AND schemaname = 'public';
 
 -- ============================================
 -- NOTES

@@ -1,32 +1,13 @@
 -- Active: 1763927870265@@aws-1-eu-west-1.pooler.supabase.com@5432@postgres
 -- JosCity Database Schema
 -- PostgreSQL tables for all pages (except Admin and NewsFeed)
--- Database: joscity
-
--- Set search path to public schema (Supabase default)
-SET search_path TO public;
+-- Database: PostgreSQL (using public schema)
+-- 
+-- Note: This schema uses the 'public' schema (PostgreSQL default)
+-- All tables are created in the public schema unless otherwise specified
+-- When running this script via psql, the public schema is used by default
 
 -- IMPORTANT: Foreign Key Note
--- This schema includes foreign key references to a 'users' table that should exist
--- from your authentication schema. If you get errors about missing 'users' table:
--- 
--- Option 1 (Recommended): Create your users table first before running this schema
--- 
--- Option 2: Temporarily remove foreign key constraints by replacing:
---   "UUID REFERENCES users(id) ON DELETE SET NULL" 
---   with just:
---   "UUID"
--- Then add constraints later using the ALTER TABLE statements provided at the end of this file
-
--- UUID Generation
--- This schema uses gen_random_uuid() which is available by default in:
--- - Supabase (all versions)
--- - PostgreSQL 13+ 
--- - PostgreSQL 12 with pgcrypto extension enabled
--- 
--- If you need uuid-ossp extension instead, replace all gen_random_uuid() 
--- with uuid_generate_v4() and uncomment the line below:
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
 -- NAVBAR PAGE TABLES
