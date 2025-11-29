@@ -56,14 +56,14 @@ if (!process.env.JWT_SECRET) {
     console.error("   Server will continue but authentication may not work");
 }
 // Handle uncaught exceptions - prevent server crash
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    console.error('   → Server will continue running');
+process.on("uncaughtException", (error) => {
+    console.error("❌ Uncaught Exception:", error);
+    console.error("   → Server will continue running");
     // Don't exit - log and continue
 });
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    console.error('   → Server will continue running');
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+    console.error("   → Server will continue running");
     // Don't exit - log and continue
 });
 // Start server
@@ -71,21 +71,21 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
-    console.log(`📧 Email service: ${process.env.SMTP_USER ? "Configured" : "Not configured"}`);
+    console.log(`📧 Email service: ${process.env.RESEND_API_KEY ? "Configured (Resend)" : "Not configured"}`);
     console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
 });
 // Graceful shutdown handler
-process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down server gracefully...');
+process.on("SIGINT", () => {
+    console.log("\n🛑 Shutting down server gracefully...");
     server.close(() => {
-        console.log('✅ Server closed');
+        console.log("✅ Server closed");
         process.exit(0);
     });
 });
-process.on('SIGTERM', () => {
-    console.log('\n🛑 Shutting down server gracefully...');
+process.on("SIGTERM", () => {
+    console.log("\n🛑 Shutting down server gracefully...");
     server.close(() => {
-        console.log('✅ Server closed');
+        console.log("✅ Server closed");
         process.exit(0);
     });
 });

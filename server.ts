@@ -2,8 +2,29 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import path from "path";
+import fs from "fs";
 
-dotenv.config();
+// Load environment variables - check multiple locations with proper file existence checks
+const backendEnvPath = path.resolve(__dirname, ".env");
+const rootEnvPath = path.resolve(__dirname, "..", ".env");
+const parentEnvPath = path.resolve(process.cwd(), ".env");
+
+// Try to load .env files in priority order (first found wins)
+if (fs.existsSync(backendEnvPath)) {
+  dotenv.config({ path: backendEnvPath });
+  console.log(`📄 Loaded .env from: ${backendEnvPath}`);
+} else if (fs.existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath });
+  console.log(`📄 Loaded .env from: ${rootEnvPath}`);
+} else if (fs.existsSync(parentEnvPath)) {
+  dotenv.config({ path: parentEnvPath });
+  console.log(`📄 Loaded .env from: ${parentEnvPath}`);
+} else {
+  // Fallback to default dotenv lookup
+  dotenv.config();
+  console.log(`📄 Using default dotenv lookup`);
+}
 
 const app: Express = express();
 
@@ -64,15 +85,15 @@ if (!process.env.JWT_SECRET) {
 }
 
 // Handle uncaught exceptions - prevent server crash
-process.on('uncaughtException', (error: Error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('   → Server will continue running');
+process.on("uncaughtException", (error: Error) => {
+  console.error("❌ Uncaught Exception:", error);
+  console.error("   → Server will continue running");
   // Don't exit - log and continue
 });
 
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  console.error('   → Server will continue running');
+process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  console.error("   → Server will continue running");
   // Don't exit - log and continue
 });
 
@@ -85,29 +106,44 @@ const server = app.listen(PORT, () => {
       process.env.JWT_SECRET ? "Configured" : "Not configured"
     }`
   );
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    console.log(
+      `📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(
+        0,
+        12
+      )}...)`
+    );
+    console.log(
+      `   RESEND_FROM: ${
+        process.env.RESEND_FROM ||
+        process.env.SMTP_FROM ||
+        "Not set (using default)"
+      }`
+    );
+  } else {
+    console.warn(
+      `📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`
+    );
+  }
   console.log(
-    `📧 Email service: ${
-      process.env.SMTP_USER ? "Configured" : "Not configured"
-    }`
-  );
-  console.log(
-    `🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}` 
+    `🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`
   );
 });
 
 // Graceful shutdown handler
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down server gracefully...');
+process.on("SIGINT", () => {
+  console.log("\n🛑 Shutting down server gracefully...");
   server.close(() => {
-    console.log('✅ Server closed');
+    console.log("✅ Server closed");
     process.exit(0);
   });
 });
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Shutting down server gracefully...');
+process.on("SIGTERM", () => {
+  console.log("\n🛑 Shutting down server gracefully...");
   server.close(() => {
-    console.log('✅ Server closed');
+    console.log("✅ Server closed");
     process.exit(0);
   });
 });

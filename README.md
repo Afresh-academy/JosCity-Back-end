@@ -18,7 +18,7 @@ A TypeScript-based Express.js backend API for the JosCity social network platfor
 - Node.js (v14 or higher)
 - npm or yarn
 - PostgreSQL database (v12 or higher)
-- SMTP email service (Gmail, SendGrid, etc.)
+- Resend API key for email service
 
 ## 🛠️ Installation
 
@@ -51,12 +51,11 @@ DB_PORT=5432
 # JWT Secret
 JWT_SECRET=your_jwt_secret_key_here
 
-# Email Configuration (SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-SMTP_FROM="JosCity <noreply@joscity.com>"
+# Email Configuration (Resend)
+RESEND_API_KEY=re_your_resend_api_key_here
+RESEND_FROM="JosCity <onboarding@resend.dev>"
+# Optional: You can also use your own verified domain
+# RESEND_FROM="JosCity <noreply@yourdomain.com>"
 ```
 
 4. Build the TypeScript project:
@@ -388,12 +387,18 @@ DB_PORT=5432
 
 ## 📧 Email Service
 
-The application uses Nodemailer for sending emails. Configure your SMTP settings in the `.env` file. The service sends:
+The application uses Resend API for sending emails. Configure your Resend API key in the `.env` file. The service sends:
 
 - Account registration confirmation
 - Account approval notifications with activation codes
 - Password reset codes
 - Account rejection notifications
+
+**Getting Started with Resend:**
+1. Sign up at [resend.com](https://resend.com)
+2. Get your API key from the dashboard
+3. Add `RESEND_API_KEY` to your `.env` file
+4. Set `RESEND_FROM` to your verified email address (or use the default onboarding@resend.dev for testing)
 
 ## 🛠️ Development
 
@@ -424,7 +429,7 @@ This compiles TypeScript files to JavaScript in the `dist/` directory.
 - `bcryptjs` - Password hashing
 - `jsonwebtoken` - JWT authentication
 - `pg` - PostgreSQL database driver
-- `nodemailer` - Email service
+- Uses Resend API for email service (no additional package required)
 - `cors` - Cross-origin resource sharing
 - `dotenv` - Environment variable management
 
@@ -437,7 +442,6 @@ This compiles TypeScript files to JavaScript in the `dist/` directory.
 - `@types/bcryptjs` - bcryptjs type definitions
 - `@types/jsonwebtoken` - JWT type definitions
 - `@types/pg` - PostgreSQL type definitions
-- `@types/nodemailer` - Nodemailer type definitions
 - `@types/cors` - CORS type definitions
 
 ## 🔒 Security

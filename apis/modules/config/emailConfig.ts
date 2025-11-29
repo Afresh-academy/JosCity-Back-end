@@ -1,163 +1,76 @@
-import nodemailer, { Transporter } from "nodemailer";
 import dotenv from "dotenv";
+
+// Ensure environment variables are loaded
+// This is safe to call multiple times - dotenv won't overwrite existing vars
 dotenv.config();
 
-// Helper function to get SMTP configuration
-const getSmtpConfig = () => {
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT || "465");
-  const user = process.env.SMTP_USER || "";
-  const pass = process.env.SMTP_PASS || "";
-  
-  // Check if credentials are provided
-  if (!user || !pass) {
-    console.warn("⚠️  SMTP_USER or SMTP_PASS not configured. Email sending will fail.");
-    return null;
-  }
-
-  // For Gmail, use service-based configuration if it's Gmail
-  if (host.includes("gmail.com") && user.includes("@gmail.com")) {
-    return {
-      service: "gmail",
-      auth: {
-        user: user,
-        pass: pass,
-      },
-      // Connection timeout settings for better reliability
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000, // 30 seconds
-      socketTimeout: 60000, // 60 seconds
-      // Pool connections for better performance
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 3,
-    };
-  }
-
-  // For other SMTP providers, use host/port configuration
-  const isSecure = port === 465;
-  const config: any = {
-    host: host,
-    port: port,
-    secure: isSecure, // true for 465, false for other ports
-    auth: {
-      user: user,
-      pass: pass,
-    },
-    // Connection timeout settings for better reliability
-    connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000, // 30 seconds
-    socketTimeout: 60000, // 60 seconds
-    // Add TLS options for better compatibility
-    tls: {
-      rejectUnauthorized: false, // For self-signed certificates (use true in production with valid certs)
-    },
-    // Pool connections for better performance
-    pool: true,
-    maxConnections: 1,
-    maxMessages: 3,
-  };
-
-  // For port 587, use STARTTLS
-  if (port === 587) {
-    config.secure = false;
-    config.requireTLS = true;
-  }
-
-  return config;
-};
-
-// Create transporter
-const smtpConfig = getSmtpConfig();
-let transporter: Transporter | null = null;
-
-if (smtpConfig) {
-  try {
-    transporter = nodemailer.createTransport(smtpConfig);
-    
-    // Verify connection on startup (non-blocking with timeout)
-    const verifyTimeout = setTimeout(() => {
-      console.warn("⚠️  Email verification is taking longer than expected. Connection will be verified on first email send.");
-    }, 5000); // 5 second warning
-
-    transporter.verify(function (error, _success) {
-      clearTimeout(verifyTimeout);
-      if (error) {
-        // Handle timeout errors specifically
-        const smtpError = error as any;
-        if (smtpError.code === "ETIMEDOUT" || smtpError.code === "ECONNECTION" || smtpError.command === "CONN") {
-          console.warn("⚠️  Email server connection timeout during verification.");
-          console.warn("   This may be normal in restricted network environments (like Render).");
-          console.warn("   Connection will be attempted when sending emails.");
-        } else {
-          console.error("❌ Email configuration error:", error.message);
-          console.error("   Please check your SMTP settings in .env file");
-        }
-      } else {
-        console.log("✅ Email server is ready to send messages");
-      }
-    });
-  } catch (error: any) {
-    console.error("❌ Failed to create email transporter:", error.message);
-    transporter = null;
-  }
-} else {
-  console.warn("⚠️  Email transporter not initialized - SMTP credentials missing");
-}
-
-// Helper function to parse SMTP_FROM
+// Helper function to get the "from" email address
 const getFromAddress = (): string => {
-  const user = process.env.SMTP_USER || "";
-  const from = process.env.SMTP_FROM || "";
-  
-  // For Gmail, the "from" address must match the authenticated user
-  // Extract email from SMTP_FROM if it's in "Name <email>" format
-  let fromEmail = user; // Default to SMTP_USER
-  
+  // Check for RESEND_FROM first, then fallback to SMTP_FROM for backward compatibility
+  const from = process.env.RESEND_FROM || process.env.SMTP_FROM || "";
+  const user = process.env.SMTP_USER || ""; // Keep for backward compatibility
+
+  // If RESEND_FROM or SMTP_FROM is set, use it
   if (from) {
     const cleanFrom = from.replace(/^["']|["']$/g, "");
-    
-    // If it's in "Name <email>" format, extract the email
-    const emailMatch = cleanFrom.match(/<([^>]+)>/);
-    if (emailMatch) {
-      fromEmail = emailMatch[1];
+
+    // If it's in "Name <email>" format, keep it as is (Resend supports this)
+    if (cleanFrom.includes("<") && cleanFrom.includes(">")) {
+      return cleanFrom;
     } else if (cleanFrom.includes("@")) {
-      // If it's just an email address
-      fromEmail = cleanFrom;
-    }
-    
-    // For Gmail, force the from email to match the authenticated user
-    if (user.includes("@gmail.com")) {
-      fromEmail = user;
-    }
-    
-    // Extract name from SMTP_FROM if available
-    const nameMatch = cleanFrom.match(/^["']?([^"']+)["']?\s*</);
-    const displayName = nameMatch ? nameMatch[1] : cleanFrom.split("<")[0].trim().replace(/^["']|["']$/g, "");
-    
-    if (displayName && displayName !== fromEmail) {
-      return `"${displayName}" <${fromEmail}>`;
+      // If it's just an email address, use it
+      return cleanFrom;
     }
   }
-  
-  // Default formatting with user's name
-  if (user) {
-    const name = user.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, l => l.toUpperCase());
+
+  // If SMTP_USER is available, use it (backward compatibility)
+  if (user && user.includes("@")) {
+    const name = user
+      .split("@")[0]
+      .replace(/\./g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
     return `"${name}" <${user}>`;
   }
-  
-  return '"JosCity" <support@joscity.com>';
+
+  // Default fallback
+  return '"JosCity" <onboarding@resend.dev>';
 };
 
-// Send email function
+// Validate that Resend API key is configured
+const validateResendConfig = (): boolean => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️  RESEND_API_KEY not configured. Email sending will fail.");
+    console.warn("   Please add RESEND_API_KEY to your .env file");
+    return false;
+  }
+  return true;
+};
+
+// Initialize and validate on startup
+const isResendConfigured = validateResendConfig();
+if (isResendConfigured) {
+  const apiKey = process.env.RESEND_API_KEY || "";
+  console.log(`✅ Resend email service is configured (API Key: ${apiKey.substring(0, 12)}...)`);
+  const fromAddress = getFromAddress();
+  console.log(`   From address: ${fromAddress}`);
+} else {
+  console.warn("⚠️  Email service not initialized - RESEND_API_KEY missing");
+  console.warn("   Please add RESEND_API_KEY=re_your_key_here to your .env file");
+}
+
+// Send email function using Resend API
 export const sendEmail = async (
   to: string,
   subject: string,
   html: string
 ): Promise<any> => {
-  // Check if transporter is initialized
-  if (!transporter) {
-    const error = new Error("Email service not configured. Please set SMTP_USER and SMTP_PASS in .env file.");
+  // Check if Resend API key is configured
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    const error = new Error(
+      "Email service not configured. Please set RESEND_API_KEY in .env file."
+    );
     console.error("❌", error.message);
     throw error;
   }
@@ -171,35 +84,72 @@ export const sendEmail = async (
   }
 
   try {
-    const mailOptions = {
-      from: getFromAddress(),
-      to: to,
-      subject: subject,
-      html: html,
-    };
+    const fromAddress = getFromAddress();
 
     console.log(`📧 Attempting to send email to: ${to}`);
-    const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully to: ${to} (Message ID: ${result.messageId})`);
-    return result;
-  } catch (error: any) {
-    console.error(`❌ Email sending failed to ${to}:`, error.message);
-    
-    // Provide more helpful error messages
-    if (error.code === "EAUTH") {
-      throw new Error("Email authentication failed. Please check your SMTP_USER and SMTP_PASS in .env file.");
-    } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNECTION" && error.command === "CONN")) {
-      throw new Error(`Connection timeout to email server. Please verify:
-- SMTP_HOST is correct (${process.env.SMTP_HOST || "smtp.gmail.com"})
-- SMTP_PORT is correct (${process.env.SMTP_PORT || "465"})
-- Your hosting provider allows outbound SMTP connections
-- Firewall rules allow connections to the SMTP server`);
-    } else if (error.code === "ECONNECTION") {
-      throw new Error("Failed to connect to email server. Please check your SMTP_HOST and SMTP_PORT in .env file.");
-    } else if (error.responseCode === 535) {
-      throw new Error("Email authentication failed. For Gmail, make sure you're using an App Password, not your regular password.");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [to],
+        subject: subject,
+        html: html,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: any = await response
+        .json()
+        .catch(() => ({ message: "Unknown error" }));
+      console.error("❌ Resend API error:", errorData);
+
+      // Provide helpful error messages
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(
+          "Resend API authentication failed. Please check your RESEND_API_KEY in .env file."
+        );
+      } else if (response.status === 422) {
+        throw new Error(
+          `Invalid email configuration: ${
+            errorData.message || "Please check your RESEND_FROM email address."
+          }`
+        );
+      } else if (response.status === 429) {
+        throw new Error("Rate limit exceeded. Please try again later.");
+      } else {
+        throw new Error(
+          `Failed to send email via Resend: ${
+            errorData.message || `HTTP ${response.status}`
+          }`
+        );
+      }
     }
-    
+
+    const data: any = await response.json();
+    console.log(
+      `✅ Email sent successfully to: ${to} (Message ID: ${data.id || "N/A"})`
+    );
+    return data;
+  } catch (error: any) {
+    console.error(`❌ Email sending failed to ${to}:`, error.message || error);
+
+    // If it's already a formatted error, re-throw it
+    if (error.message && error.message.includes("Resend")) {
+      throw error;
+    }
+
+    // Handle network errors
+    if (error.code === "ECONNREFUSED" || error.code === "ENOTFOUND") {
+      throw new Error(
+        "Failed to connect to Resend API. Please check your internet connection."
+      );
+    }
+
     throw error;
   }
 };
