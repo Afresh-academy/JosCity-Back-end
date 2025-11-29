@@ -7,7 +7,30 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
-dotenv_1.default.config();
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+// Load environment variables - check multiple locations with proper file existence checks
+const backendEnvPath = path_1.default.resolve(__dirname, ".env");
+const rootEnvPath = path_1.default.resolve(__dirname, "..", ".env");
+const parentEnvPath = path_1.default.resolve(process.cwd(), ".env");
+// Try to load .env files in priority order (first found wins)
+if (fs_1.default.existsSync(backendEnvPath)) {
+    dotenv_1.default.config({ path: backendEnvPath });
+    console.log(`📄 Loaded .env from: ${backendEnvPath}`);
+}
+else if (fs_1.default.existsSync(rootEnvPath)) {
+    dotenv_1.default.config({ path: rootEnvPath });
+    console.log(`📄 Loaded .env from: ${rootEnvPath}`);
+}
+else if (fs_1.default.existsSync(parentEnvPath)) {
+    dotenv_1.default.config({ path: parentEnvPath });
+    console.log(`📄 Loaded .env from: ${parentEnvPath}`);
+}
+else {
+    // Fallback to default dotenv lookup
+    dotenv_1.default.config();
+    console.log(`📄 Using default dotenv lookup`);
+}
 const app = (0, express_1.default)();
 // Middleware - must be before routes
 app.use((0, cors_1.default)());
@@ -71,7 +94,16 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
-    console.log(`📧 Email service: ${process.env.RESEND_API_KEY ? "Configured (Resend)" : "Not configured"}`);
+    const resendKey = process.env.RESEND_API_KEY;
+    if (resendKey) {
+        console.log(`📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(0, 12)}...)`);
+        console.log(`   RESEND_FROM: ${process.env.RESEND_FROM ||
+            process.env.SMTP_FROM ||
+            "Not set (using default)"}`);
+    }
+    else {
+        console.warn(`📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`);
+    }
     console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
 });
 // Graceful shutdown handler

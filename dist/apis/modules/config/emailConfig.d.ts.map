@@ -1,1 +1,1 @@
-{"version":3,"file":"emailConfig.d.ts","sourceRoot":"","sources":["../../../../apis/modules/config/emailConfig.ts"],"names":[],"mappings":"AAoDA,eAAO,MAAM,SAAS,GACpB,IAAI,MAAM,EACV,SAAS,MAAM,EACf,MAAM,MAAM,KACX,OAAO,CAAC,GAAG,CAsEb,CAAC"}
+{"version":3,"file":"emailConfig.d.ts","sourceRoot":"","sources":["../../../../apis/modules/config/emailConfig.ts"],"names":[],"mappings":"AA0EA,eAAO,MAAM,SAAS,GACpB,IAAI,MAAM,EACV,SAAS,MAAM,EACf,MAAM,MAAM,KACX,OAAO,CAAC,GAAG,CAoJb,CAAC"}
