@@ -40,8 +40,8 @@ import adminRoutes from "./apis/modules/routes/admin";
 import authRoutes from "./apis/modules/routes/authRoute";
 import landingPageRoutes from "./apis/modules/routes/landingPage";
 
-// Use admin routes
-app.use("/admin/auth", adminRoutes);
+// Use admin routes - mounted at /admin so routes become /admin/auth, /admin/dashboard, etc.
+app.use("/admin", adminRoutes);
 
 // Use routes
 app.use("/api/auth", authRoutes);
