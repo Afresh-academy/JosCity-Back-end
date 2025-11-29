@@ -23,6 +23,14 @@ const getSmtpConfig = () => {
         user: user,
         pass: pass,
       },
+      // Connection timeout settings for better reliability
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      // Pool connections for better performance
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 3,
     };
   }
 
@@ -36,10 +44,18 @@ const getSmtpConfig = () => {
       user: user,
       pass: pass,
     },
+    // Connection timeout settings for better reliability
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
     // Add TLS options for better compatibility
     tls: {
       rejectUnauthorized: false, // For self-signed certificates (use true in production with valid certs)
     },
+    // Pool connections for better performance
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 3,
   };
 
   // For port 587, use STARTTLS
@@ -59,11 +75,24 @@ if (smtpConfig) {
   try {
     transporter = nodemailer.createTransport(smtpConfig);
     
-    // Verify connection on startup (non-blocking)
-    transporter.verify(function (error, success) {
+    // Verify connection on startup (non-blocking with timeout)
+    const verifyTimeout = setTimeout(() => {
+      console.warn("⚠️  Email verification is taking longer than expected. Connection will be verified on first email send.");
+    }, 5000); // 5 second warning
+
+    transporter.verify(function (error, _success) {
+      clearTimeout(verifyTimeout);
       if (error) {
-        console.error("❌ Email configuration error:", error.message);
-        console.error("   Please check your SMTP settings in .env file");
+        // Handle timeout errors specifically
+        const smtpError = error as any;
+        if (smtpError.code === "ETIMEDOUT" || smtpError.code === "ECONNECTION" || smtpError.command === "CONN") {
+          console.warn("⚠️  Email server connection timeout during verification.");
+          console.warn("   This may be normal in restricted network environments (like Render).");
+          console.warn("   Connection will be attempted when sending emails.");
+        } else {
+          console.error("❌ Email configuration error:", error.message);
+          console.error("   Please check your SMTP settings in .env file");
+        }
       } else {
         console.log("✅ Email server is ready to send messages");
       }
@@ -159,6 +188,12 @@ export const sendEmail = async (
     // Provide more helpful error messages
     if (error.code === "EAUTH") {
       throw new Error("Email authentication failed. Please check your SMTP_USER and SMTP_PASS in .env file.");
+    } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNECTION" && error.command === "CONN")) {
+      throw new Error(`Connection timeout to email server. Please verify:
+- SMTP_HOST is correct (${process.env.SMTP_HOST || "smtp.gmail.com"})
+- SMTP_PORT is correct (${process.env.SMTP_PORT || "465"})
+- Your hosting provider allows outbound SMTP connections
+- Firewall rules allow connections to the SMTP server`);
     } else if (error.code === "ECONNECTION") {
       throw new Error("Failed to connect to email server. Please check your SMTP_HOST and SMTP_PORT in .env file.");
     } else if (error.responseCode === 535) {
