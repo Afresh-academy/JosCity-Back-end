@@ -50,6 +50,21 @@ app.use("/api/auth", authRoutes);
 app.use("/api/landing-page", landingPageRoutes);
 // app.use('/api/business', businessRoutes);
 
+// Root route
+app.get("/", (_req: Request, res: Response) => {
+  res.json({
+    message: "JosCity Backend API",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: "/api/ping",
+      auth: "/api/auth",
+      landingPage: "/api/landing-page",
+      admin: "/admin",
+    },
+  });
+});
+
 // Health check
 app.get("/api/ping", (_req: Request, res: Response) => {
   res.json({
