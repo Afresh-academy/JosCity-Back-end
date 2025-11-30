@@ -79,9 +79,10 @@ module.exports = app;
 
 // Start server only if not in Vercel environment
 if (process.env.VERCEL !== "1") {
-  const PORT: string | number = process.env.PORT || 3000;
-  const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  const PORT = Number(process.env.PORT) || 3000;
+  const HOST = "0.0.0.0";
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server running on http://${HOST}:${PORT}`);
     console.log(
       `🔐 JWT Authentication: ${
         process.env.JWT_SECRET ? "Configured" : "Not configured"
