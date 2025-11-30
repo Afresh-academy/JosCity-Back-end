@@ -6,6 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGuidelines = exports.updateGuidelinesSettings = exports.getGuidelinesSettings = exports.updateUserSubscription = exports.getUserSubscriptions = exports.deletePricingPlanFeature = exports.updatePricingPlanFeature = exports.createPricingPlanFeature = exports.getPricingPlanFeatures = exports.deletePricingPlan = exports.updatePricingPlan = exports.createPricingPlan = exports.getPricingPlan = exports.getPricingPlans = exports.updatePricingSettings = exports.getPricingSettings = exports.updateServiceRequest = exports.getServiceRequests = exports.deleteService = exports.updateService = exports.createService = exports.getService = exports.getServices = exports.updateServicesSettings = exports.getServicesSettings = exports.updateEventRegistration = exports.getEventRegistrations = exports.deleteEvent = exports.updateEvent = exports.createEvent = exports.getEvent = exports.getEvents = exports.updateEventsSettings = exports.getEventsSettings = exports.deleteContactInformation = exports.updateContactInformation = exports.createContactInformation = exports.getContactInformation = exports.deleteContactMessage = exports.updateContactMessage = exports.getContactMessage = exports.getContactMessages = exports.updateContactSettings = exports.getContactSettings = exports.updateNavbarSettings = exports.getNavbarSettings = exports.deleteNavbarMenuItem = exports.updateNavbarMenuItem = exports.createNavbarMenuItem = exports.getNavbarMenuItems = void 0;
 exports.getRegisteredCitizensCount = exports.deleteFooterLink = exports.updateFooterLink = exports.createFooterLink = exports.getFooterLinks = exports.updateFooterSettings = exports.getFooterSettings = exports.deleteHeroSlide = exports.updateHeroSlide = exports.createHeroSlide = exports.getHeroSlide = exports.getHeroSlides = exports.updateHeroSettings = exports.getHeroSettings = exports.deleteGuideline = exports.updateGuideline = exports.createGuideline = exports.getGuideline = void 0;
 const database_1 = __importDefault(require("../../config/database"));
+// AuthRequest interface defined but currently unused
+// interface AuthRequest extends Request {
+//   user?: {
+//     user_id: number;
+//   };
+// }
 // ============================================
 // NAVBAR CONTROLLERS
 // ============================================

@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import db from "../../config/database";
 
+// AuthRequest interface defined but currently unused
+// interface AuthRequest extends Request {
+//   user?: {
+//     user_id: number;
+//   };
+// }
+
 // ============================================
 // NAVBAR CONTROLLERS
 // ============================================

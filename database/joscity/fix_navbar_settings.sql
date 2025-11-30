@@ -1,11 +1,8 @@
 -- Quick fix: Create navbar_settings table if it doesn't exist
 -- Run this script if you get "relation navbar_settings does not exist" error
 
--- Create landing_page schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS landing_page;
-
--- Ensure we're in the landing_page schema
-SET search_path TO landing_page;
+-- Ensure we're in the public schema
+SET search_path TO public;
 
 -- Create the table
 CREATE TABLE IF NOT EXISTS navbar_settings (

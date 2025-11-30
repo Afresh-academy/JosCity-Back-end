@@ -1,11 +1,7 @@
 -- Standalone script to create all page settings tables
 -- Run this if you're getting "relation does not exist" errors
-
--- Create landing_page schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS landing_page;
-
--- Set search path to landing_page schema
-SET search_path TO landing_page;
+-- Set search path to public schema
+SET search_path TO public;
 
 -- Contact Page Settings
 CREATE TABLE IF NOT EXISTS contact_page_settings (
@@ -83,17 +79,6 @@ CREATE TABLE IF NOT EXISTS navbar_settings (
     get_started_button_text VARCHAR(100) DEFAULT 'Get Started',
     get_started_button_route VARCHAR(500),
     is_active BOOLEAN DEFAULT true,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID
-);
-
--- Footer Settings
-CREATE TABLE IF NOT EXISTS footer_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    logo_url TEXT,
-    tagline TEXT,
-    copyright_text TEXT,
-    social_media JSONB,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID
 );
