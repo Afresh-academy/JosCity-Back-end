@@ -51,14 +51,53 @@ app.use((error, _req, res, _next) => {
 if (!process.env.JWT_SECRET) {
     console.error("❌ ERROR: JWT_SECRET is not set in .env file");
     console.error("   Please add JWT_SECRET to your .env file");
-    process.exit(1);
+    console.error("   Server will continue but authentication may not work");
 }
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
-    console.log(`📧 Email service: ${process.env.SMTP_USER ? "Configured" : "Not configured"}`);
-    console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
+// Handle uncaught exceptions - prevent server crash
+process.on("uncaughtException", (error) => {
+    console.error("❌ Uncaught Exception:", error);
+    console.error("   → Server will continue running");
+    // Don't exit - log and continue
 });
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+    console.error("   → Server will continue running");
+    // Don't exit - log and continue
+});
+// Export app for Vercel serverless functions
+module.exports = app;
+// Start server only if not in Vercel environment
+if (process.env.VERCEL !== "1") {
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`🔐 JWT Authentication: ${process.env.JWT_SECRET ? "Configured" : "Not configured"}`);
+        const resendKey = process.env.RESEND_API_KEY;
+        if (resendKey) {
+            console.log(`📧 Email service: ✅ Configured (Resend API Key: ${resendKey.substring(0, 12)}...)`);
+            console.log(`   RESEND_FROM: ${process.env.RESEND_FROM ||
+                process.env.SMTP_FROM ||
+                "Not set (using default)"}`);
+        }
+        else {
+            console.warn(`📧 Email service: ⚠️  Not configured - RESEND_API_KEY missing`);
+        }
+        console.log(`🗄️  Database: ${process.env.DB_HOST ? "Configured" : "Using defaults"}`);
+    });
+    // Graceful shutdown handler
+    process.on("SIGINT", () => {
+        console.log("\n🛑 Shutting down server gracefully...");
+        server.close(() => {
+            console.log("✅ Server closed");
+            process.exit(0);
+        });
+    });
+    process.on("SIGTERM", () => {
+        console.log("\n🛑 Shutting down server gracefully...");
+        server.close(() => {
+            console.log("✅ Server closed");
+            process.exit(0);
+        });
+    });
+}
 //# sourceMappingURL=server.js.map

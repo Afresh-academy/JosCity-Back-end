@@ -165,7 +165,7 @@ export const getDatabaseTables = async (_req: Request, res: Response): Promise<v
         table_name,
         table_schema
       FROM information_schema.tables
-      WHERE table_schema = 'joscity' OR table_schema = 'public'
+      WHERE table_schema = 'public'
       ORDER BY table_schema, table_name
     `);
 
@@ -188,7 +188,7 @@ export const getDatabaseTables = async (_req: Request, res: Response): Promise<v
 export const getTableSchema = async (req: Request, res: Response): Promise<void> => {
   try {
     const { table_name } = req.params;
-    const { schema = 'joscity' } = req.query;
+    const { schema = 'public' } = req.query;
 
     // Prevent SQL injection by validating table name
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table_name)) {

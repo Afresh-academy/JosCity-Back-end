@@ -145,7 +145,7 @@ const getDatabaseTables = async (_req, res) => {
         table_name,
         table_schema
       FROM information_schema.tables
-      WHERE table_schema = 'joscity' OR table_schema = 'public'
+      WHERE table_schema = 'public'
       ORDER BY table_schema, table_name
     `);
         res.json({
@@ -168,7 +168,7 @@ exports.getDatabaseTables = getDatabaseTables;
 const getTableSchema = async (req, res) => {
     try {
         const { table_name } = req.params;
-        const { schema = 'joscity' } = req.query;
+        const { schema = 'public' } = req.query;
         // Prevent SQL injection by validating table name
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table_name)) {
             res.status(400).json({

@@ -60,6 +60,11 @@ export declare const signOut: (_req: Request, res: Response) => Promise<void>;
  */
 export declare const adminLogin: (req: Request, res: Response) => Promise<void>;
 /**
+ * Admin Authentication - Hardcoded credentials for admin access
+ * Route: /api/admin/adminAuth
+ */
+export declare const adminAuth: (req: Request, res: Response) => Promise<void>;
+/**
  * Personal Registration - Wrapper for signUp with account_type='personal'
  */
 export declare const personalRegister: (req: Request<{}, {}, SignUpBody>, res: Response) => Promise<void>;

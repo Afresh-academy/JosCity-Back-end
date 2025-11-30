@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.businessRegister = exports.personalRegister = exports.adminLogin = exports.signOut = exports.resendActivation = exports.forgetPasswordReset = exports.forgetPasswordConfirm = exports.forgetPassword = exports.signIn = exports.rejectAccount = exports.approveAccount = exports.getPendingApprovals = exports.signUp = void 0;
+exports.businessRegister = exports.personalRegister = exports.adminAuth = exports.adminLogin = exports.signOut = exports.resendActivation = exports.forgetPasswordReset = exports.forgetPasswordConfirm = exports.forgetPassword = exports.signIn = exports.rejectAccount = exports.approveAccount = exports.getPendingApprovals = exports.signUp = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = __importDefault(require("../config/database"));
@@ -685,6 +685,88 @@ const adminLogin = async (req, res) => {
     }
 };
 exports.adminLogin = adminLogin;
+/**
+ * Admin Authentication - Hardcoded credentials for admin access
+ * Route: /api/admin/adminAuth
+ */
+const adminAuth = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        // Hardcoded admin credentials
+        const ADMIN_EMAIL = "admin@joscity.com";
+        const ADMIN_PASSWORD = "admin123";
+        // Validate required fields
+        if (!email || !password) {
+            res.status(400).json({
+                error: true,
+                message: "Email and password are required",
+            });
+            return;
+        }
+        // Check credentials
+        if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+            res.status(401).json({
+                error: true,
+                message: "Invalid email or password",
+            });
+            return;
+        }
+        // Check if JWT_SECRET is configured
+        if (!process.env.JWT_SECRET) {
+            console.error("JWT_SECRET is not configured in environment variables");
+            res.status(500).json({
+                error: true,
+                message: "Server configuration error: JWT authentication not properly configured",
+            });
+            return;
+        }
+        // Generate JWT token with admin role
+        const token = jsonwebtoken_1.default.sign({
+            user_id: 0, // Special admin user ID
+            email: ADMIN_EMAIL,
+            is_verified: true,
+            user_group: 1, // Admin group
+            is_admin: true,
+        }, process.env.JWT_SECRET, { expiresIn: "30d" });
+        // Prepare admin response
+        const adminResponse = {
+            user_id: 0,
+            email: ADMIN_EMAIL,
+            first_name: "Admin",
+            last_name: "User",
+            display_name: "Admin User",
+            user_group: 1,
+            is_admin: true,
+            is_moderator: false,
+            account_type: "admin",
+            is_verified: true,
+            has_verified_badge: true,
+        };
+        // Set token in HTTP-only cookie for security
+        res.cookie("admin_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // Only send over HTTPS in production
+            sameSite: "strict",
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        });
+        // Return success response
+        res.json({
+            success: true,
+            message: "Admin authentication successful",
+            token: token,
+            admin: adminResponse,
+            redirect: "/admin/dashboard",
+        });
+    }
+    catch (error) {
+        console.error("Admin auth error:", error);
+        res.status(500).json({
+            error: true,
+            message: "Admin authentication failed",
+        });
+    }
+};
+exports.adminAuth = adminAuth;
 /**
  * Personal Registration - Wrapper for signUp with account_type='personal'
  */

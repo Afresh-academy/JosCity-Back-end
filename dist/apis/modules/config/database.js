@@ -18,24 +18,64 @@ const pool = new pg_1.Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
 });
-// Set search_path to joscity schema for all connections
-pool.on('connect', async (client) => {
+// Handle pool errors gracefully - don't crash the server
+pool.on("error", (err) => {
+    // Suppress fatal database termination errors that would crash the server
+    const errorMessage = err?.message || err?.toString() || "";
+    const isTerminationError = err?.code === "XX000" ||
+        errorMessage.includes("shutdown") ||
+        errorMessage.includes("termination") ||
+        errorMessage.includes("db_termination") ||
+        errorMessage === "{:shutdown, :db_termination}";
+    if (isTerminationError) {
+        // Silently suppress - these errors will cause automatic reconnection
+        return;
+    }
+    console.error("❌ Unexpected database pool error:", errorMessage || err);
+    console.error("   → Server will continue, but database operations may fail");
+    // Don't throw or exit - let the server continue running
+});
+// Set search_path to include both schemas for all connections
+pool.on("connect", async (client) => {
     try {
-        await client.query('SET search_path TO joscity, public');
-        // Verify table structure on each connection (non-blocking)
-        validateAndFixTableStructure(client).catch((err) => {
-            console.warn('Background table validation failed:', err.message);
-        });
+        // Catch client errors to prevent them from propagating to pool and crashing server
+        if (client && typeof client.on === "function") {
+            client.on("error", (err) => {
+                // Suppress fatal/termination errors completely
+                const errorMessage = err?.message || err?.toString() || "";
+                const isTerminationError = err?.code === "XX000" ||
+                    errorMessage.includes("shutdown") ||
+                    errorMessage.includes("termination") ||
+                    errorMessage.includes("db_termination") ||
+                    errorMessage === "{:shutdown, :db_termination}";
+                if (isTerminationError) {
+                    // Completely suppress - connection will be cleaned up and reconnected
+                    return;
+                }
+                // Only log non-fatal errors
+                if (errorMessage && !errorMessage.includes("termination")) {
+                    console.warn("⚠️  Database client error:", errorMessage);
+                }
+            });
+        }
+        // Set search_path to include both schemas
+        if (client && typeof client.query === "function") {
+            await client
+                .query("SET search_path TO landing_page, joscity, public")
+                .catch(() => {
+                // Ignore errors - connection can still work
+            });
+        }
     }
     catch (error) {
-        console.error('Error setting search_path:', error);
+        console.error("Error setting search_path:", error);
     }
 });
 // Validate and fix table structure
 async function validateAndFixTableStructure(client) {
     try {
         // Ensure joscity schema exists
-        await client.query('CREATE SCHEMA IF NOT EXISTS joscity');
+        await client.query("CREATE SCHEMA IF NOT EXISTS joscity");
         // Check which schema has the users table
         const schemaCheck = await client.query(`
       SELECT table_schema 
@@ -46,7 +86,7 @@ async function validateAndFixTableStructure(client) {
       LIMIT 1
     `);
         if (schemaCheck.rows.length === 0) {
-            console.warn('⚠️  Users table not found in either joscity or public schema');
+            console.warn("⚠️  Users table not found in either joscity or public schema");
             return;
         }
         const tableSchema = schemaCheck.rows[0].table_schema;
@@ -90,19 +130,19 @@ async function validateAndFixTableStructure(client) {
             await client.query(`ALTER TABLE ${tableName} ADD PRIMARY KEY (user_id)`);
             console.log(`✅ Fixed: user_id column added to ${tableName}`);
             // If table is in public schema, we should also ensure joscity schema exists
-            if (tableSchema === 'public') {
-                console.warn('⚠️  WARNING: Users table is in public schema, not joscity!');
-                console.warn('   → Consider migrating to joscity schema for better organization');
+            if (tableSchema === "public") {
+                console.warn("⚠️  WARNING: Users table is in public schema, not joscity!");
+                console.warn("   → Consider migrating to joscity schema for better organization");
             }
         }
     }
     catch (error) {
         // Don't throw - just log warning
-        console.warn('⚠️  Could not validate table structure:', error.message);
+        console.warn("⚠️  Could not validate table structure:", error.message);
     }
 }
 // Helper to normalize table references in queries to use explicit schema
-function normalizeQuery(query, schema = 'joscity') {
+function normalizeQuery(query, schema = "joscity") {
     // First, clean up any malformed prefixes (like joscity.joscity.users -> joscity.users)
     // Match any repeated schema patterns before .users
     while (/\b([a-z_][a-z0-9_]*)\.\1\.users\b/i.test(query)) {
@@ -156,12 +196,12 @@ async function detectUsersTableSchema(client) {
             return schema;
         }
         // Default to joscity if not found
-        usersTableSchema = 'joscity';
-        return 'joscity';
+        usersTableSchema = "joscity";
+        return "joscity";
     }
     catch (error) {
         // Default to joscity on error
-        usersTableSchema = 'joscity';
+        usersTableSchema = "joscity";
         return usersTableSchema;
     }
 }
@@ -169,102 +209,68 @@ const db = {
     // Execute query - returns PostgreSQL QueryResult
     // Automatically ensures schema is set and table structure is valid
     async query(query, params = []) {
-        // Ensure search_path is set before every query
         try {
-            await pool.query('SET search_path TO joscity, public');
+            // Ensure search_path is set before query
+            await pool
+                .query("SET search_path TO landing_page, joscity, public")
+                .catch(() => {
+                // Ignore - may already be set
+            });
+            return await pool.query(query, params);
         }
         catch (error) {
-            // Ignore if already set
-        }
-        // Detect actual schema if not cached
-        if (!usersTableSchema && query.toLowerCase().includes('users')) {
-            const client = await pool.connect();
-            try {
-                usersTableSchema = await detectUsersTableSchema(client);
+            // Suppress fatal termination errors
+            const errorMessage = error?.message || error?.toString() || "";
+            const isTerminationError = error?.code === "XX000" ||
+                errorMessage.includes("shutdown") ||
+                errorMessage.includes("termination") ||
+                errorMessage.includes("db_termination") ||
+                errorMessage === "{:shutdown, :db_termination}";
+            if (isTerminationError) {
+                // Return empty result instead of crashing - connection will reconnect
+                return { rows: [], rowCount: 0, command: "", oid: 0, fields: [] };
             }
-            finally {
-                client.release();
+            // Log other errors but don't crash
+            if (error.code !== "42P01") {
+                // Don't log "table does not exist" as error
+                console.error("Database query error:", error.message || error);
             }
-        }
-        // Normalize query to use explicit schema (only if not already normalized)
-        const normalizedQuery = normalizeQuery(query, usersTableSchema || 'joscity');
-        try {
-            return await pool.query(normalizedQuery, params);
-        }
-        catch (error) {
-            // If error is about missing column, try to fix it
-            if (error.message && (error.message.includes('column "user_id" does not exist') ||
-                error.code === '42703' // PostgreSQL error code for undefined column
-            )) {
-                console.warn('⚠️  user_id column missing detected. Attempting auto-fix...');
-                console.warn(`   → Query: ${normalizedQuery.substring(0, 100)}...`);
-                console.warn(`   → Error: ${error.message}`);
-                const client = await pool.connect();
-                try {
-                    // First check which schema has the table
-                    const schemaCheck = await client.query(`
-            SELECT table_schema 
-            FROM information_schema.tables 
-            WHERE table_name = 'users'
-            AND table_schema IN ('joscity', 'public')
-            ORDER BY table_schema = 'joscity' DESC
-            LIMIT 1
-          `);
-                    if (schemaCheck.rows.length > 0) {
-                        const actualSchema = schemaCheck.rows[0].table_schema;
-                        console.warn(`   → Found users table in schema: ${actualSchema}`);
-                        // Check if user_id exists in that schema
-                        const colCheck = await client.query(`
-              SELECT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_schema = $1
-                AND table_name = 'users' 
-                AND column_name = 'user_id'
-              ) as exists
-            `, [actualSchema]);
-                        if (!colCheck.rows[0].exists) {
-                            console.warn(`   → user_id column missing in ${actualSchema}.users. Adding...`);
-                            await validateAndFixTableStructure(client);
-                            // Update schema cache
-                            usersTableSchema = actualSchema;
-                        }
-                    }
-                    // Retry the query after fix with correct schema
-                    // Use the original query, not the already-normalized one
-                    const retryQuery = normalizeQuery(query, usersTableSchema || 'joscity');
-                    // Double-check we didn't create a triple prefix
-                    if (retryQuery.match(/\b[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\.users\b/i)) {
-                        console.error('⚠️  Triple schema prefix detected! Using original query.');
-                        return await pool.query(query, params);
-                    }
-                    return await pool.query(retryQuery, params);
-                }
-                finally {
-                    client.release();
-                }
-            }
-            throw error;
+            throw error; // Re-throw so calling code can handle appropriately
         }
     },
     // Get connection for transactions
     async getConnection() {
         const client = await pool.connect();
-        // Set search_path for this connection and validate structure
+        // Handle client errors
+        client.on("error", (err) => {
+            const errorMessage = err?.message || err?.toString() || "";
+            const isTerminationError = err?.code === "XX000" ||
+                errorMessage.includes("shutdown") ||
+                errorMessage.includes("termination") ||
+                errorMessage.includes("db_termination") ||
+                errorMessage === "{:shutdown, :db_termination}";
+            if (isTerminationError) {
+                return; // Completely suppress termination errors
+            }
+            if (errorMessage && !errorMessage.includes("termination")) {
+                console.warn("⚠️  Database client error:", errorMessage);
+            }
+        });
+        // Set search_path for this connection - include landing_page schema
         try {
-            await client.query('SET search_path TO joscity, public');
-            await validateAndFixTableStructure(client);
+            await client.query("SET search_path TO landing_page, joscity, public");
         }
         catch (error) {
-            console.error('Error setting search_path on connection:', error);
+            console.error("Error setting search_path on connection:", error);
         }
         return {
             query: async (query, params = []) => {
                 // Detect schema if needed
-                if (!usersTableSchema && query.toLowerCase().includes('users')) {
+                if (!usersTableSchema && query.toLowerCase().includes("users")) {
                     usersTableSchema = await detectUsersTableSchema(client);
                 }
                 // Normalize query to use explicit schema
-                const normalizedQuery = normalizeQuery(query, usersTableSchema || 'joscity');
+                const normalizedQuery = normalizeQuery(query, usersTableSchema || "joscity");
                 return await client.query(normalizedQuery, params);
             },
             beginTransaction: async () => {
@@ -285,18 +291,8 @@ const db = {
 // Test the connection
 async function testConnection() {
     try {
-        // Ensure joscity schema exists
-        await pool.query('CREATE SCHEMA IF NOT EXISTS joscity');
-        // Set search_path first
-        await pool.query('SET search_path TO joscity, public');
-        // Test if users table exists in joscity schema
-        const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'joscity' 
-        AND table_name = 'users'
-      ) as table_exists
-    `);
+        // Set search_path first - include landing_page schema
+        await pool.query("SET search_path TO landing_page, joscity, public");
         // Validate and fix table structure
         const client = await pool.connect();
         try {
@@ -305,33 +301,27 @@ async function testConnection() {
         finally {
             client.release();
         }
-        // Check if user_id column exists after fix
-        const userIdCheck = await pool.query(`
+        // Test if users table exists in joscity schema
+        const tableCheck = await pool.query(`
       SELECT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'joscity' 
-        AND table_name = 'users' 
-        AND column_name = 'user_id'
-      ) as user_id_exists
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      ) as table_exists
     `);
         const result = await pool.query("SELECT NOW() as current_time");
         console.log("✅ Connected to PostgreSQL Database");
         console.log(`   → Server time: ${result.rows[0].current_time}`);
         console.log(`   → Schema: joscity`);
-        console.log(`   → Users table exists: ${tableCheck.rows[0].table_exists ? 'Yes' : 'No'}`);
-        console.log(`   → user_id column exists: ${userIdCheck.rows[0].user_id_exists ? 'Yes' : 'No'}`);
+        console.log(`   → Users table exists: ${tableCheck.rows[0].table_exists ? "Yes" : "No"}`);
         if (!tableCheck.rows[0].table_exists) {
             console.warn("⚠️  WARNING: Users table not found in joscity schema!");
             console.warn("   → Please run: psql -U your_user -d postgres -f database/joscity/users_schema.sql");
         }
-        else if (!userIdCheck.rows[0].user_id_exists) {
-            console.error("❌ ERROR: user_id column is missing from users table!");
-            console.error("   → The auto-fix attempt failed. Please manually run:");
-            console.error("   → psql -U your_user -d postgres -f database/joscity/fix_user_id_column.sql");
-        }
     }
     catch (error) {
         console.error("❌ Database Connection Failed:", error.message);
+        console.error("   → Server will continue running, but database operations will fail");
         if (error.code === "ETIMEDOUT" || error.code === "ECONNREFUSED") {
             console.error("   → Check if DB_HOST is correct and PostgreSQL server is running");
             console.error("   → Verify network connectivity and firewall settings");
@@ -346,8 +336,23 @@ async function testConnection() {
         else if (error.code === "57P03") {
             console.error("   → Database is starting up, please try again");
         }
+        // Don't throw - let server start even if database connection fails
     }
 }
-testConnection();
+// Test connection but don't block server startup
+testConnection().catch(() => {
+    // Already handled in testConnection - just prevent unhandled rejection
+});
+// Graceful shutdown handler
+process.on("SIGINT", async () => {
+    console.log("\n🛑 Shutting down gracefully...");
+    await pool.end();
+    process.exit(0);
+});
+process.on("SIGTERM", async () => {
+    console.log("\n🛑 Shutting down gracefully...");
+    await pool.end();
+    process.exit(0);
+});
 exports.default = db;
 //# sourceMappingURL=database.js.map
